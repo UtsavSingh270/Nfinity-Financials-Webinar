@@ -68,6 +68,9 @@ const SOCIAL_ICONS = {
   website: Globe,
 };
 
+// Shared full-width container class — keeps edge padding but spans 100vw
+const CONTAINER = "w-full px-4 lg:px-10 xl:px-16";
+
 export default function HomePage({ webinars, hosts, initialSlug }) {
   const upcoming = useMemo(() => webinars.filter((item) => item.status === "upcoming"), [webinars]);
   const initial = initialSlug ? webinars.find((item) => item.slug === initialSlug) : null;
@@ -94,15 +97,24 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
   return (
     <main id="nf-webinar-page" className="min-h-screen bg-white text-slate-800">
       {/* =========================================================
-          HERO + REGISTRATION FORM — unchanged
+          HERO + REGISTRATION FORM
       ========================================================= */}
-      <section className="relative overflow-hidden bg-[linear-gradient(160deg,#f8fbff_0%,#edf3fa_100%)] pt-10 pb-6">
+      <section className="relative overflow-hidden bg-[linear-gradient(160deg,#f8fbff_0%,#edf3fa_100%)] pt-0 pb-6">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(11,42,74,0.022)_1px,transparent_1px),linear-gradient(90deg,rgba(11,42,74,0.022)_1px,transparent_1px)] bg-size:48px_48px mask-[radial-gradient(ellipse_90%_70%_at_50%_35%,#000_20%,transparent_80%)]" />
-        <div className="relative mx-auto w-[min(1120px,calc(100%-32px))]">
-          <div className="mb-3 flex h-12 items-center justify-center bg-[#123a63] px-4 text-center text-lg font-bold text-white">
-            How to Find <span className="mx-1 text-[#f2a93b]">High-Growth Investment Properties</span> Under $500k
-          </div>
+        
+        {/* Edge-to-edge banner */}
+        <div className="w-full bg-[#123a63] px-6 py-5 text-center md:py-3">
+  <p className="mx-auto max-w-l text-sm font-bold leading-relaxed text-white sm:text-base md:text-lg">
+    Kick Start Your Wealth Creation Journey Through{" "}
+    <br className="md:hidden" />
+    <span className="text-[#f2a93b]">Property Including the Latest Changes</span>{" "}
+    <br className="md:hidden" />
+    Every Property Investor Needs to Know
+  </p>
+</div>
 
+        {/* Padded content container */}
+        <div className={`relative ${CONTAINER}`}>
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)] lg:items-center">
             <motion.div
               className="pt-8"
@@ -187,21 +199,36 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                 </label>
 
                 <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
-                  Phone *
-                  <div className="grid grid-cols-[auto_1fr] items-center gap-0 overflow-hidden rounded-xl border border-[#dbe3ef] bg-[#f9fbfd]">
-                    <span className="flex h-12 items-center gap-2 border-r border-[#dbe3ef] bg-[#f9fbfd] px-3 text-sm font-bold text-[#0b2a4a]">
-                      <span aria-hidden="true">🇦🇺</span> +61
-                    </span>
-                    <input
-                      inputMode="tel"
-                      placeholder="0412 345 678"
-                      className="h-12 bg-transparent px-4 text-base text-[#16233a] outline-none"
-                      value={form.phone}
-                      onChange={(event) => setForm((current) => ({ ...current, phone: normalizeAuPhone(event.target.value) }))}
-                      required
-                    />
-                  </div>
-                </label>
+  Phone *
+  <div className="grid grid-cols-[auto_1fr] items-center gap-0 overflow-hidden rounded-xl border border-[#dbe3ef] bg-[#f9fbfd]">
+    <span className="flex h-12 items-center gap-2 border-r border-[#dbe3ef] bg-[#f9fbfd] px-3 text-sm font-bold text-[#0b2a4a]">
+      <svg viewBox="0 0 30 20" className="h-3.5 w-5" fill="none">
+        <path d="M30 0H0V20H30V0Z" fill="#0052B4" />
+        <path d="M11.0872 12.4564L11.7292 13.7989L13.1793 13.4639L12.5299 14.8029L13.6959 15.7275L12.2442 16.0548L12.2482 17.5429L11.0872 16.6119L9.92619 17.5429L9.93023 16.0548L8.47852 15.7275L9.64453 14.8029L8.99514 13.4639L10.4451 13.7989L11.0872 12.4564Z" fill="#F0F0F0" />
+        <path d="M22.6798 14.1241L22.9861 14.7645L23.6776 14.6047L23.3679 15.2433L23.9241 15.6844L23.2316 15.8404L23.2335 16.5502L22.6798 16.1062L22.1261 16.5502L22.1279 15.8404L21.4355 15.6844L21.9917 15.2433L21.682 14.6047L22.3736 14.7645L22.6798 14.1241Z" fill="#F0F0F0" />
+        <path d="M19.8322 7.33099L20.1385 7.97141L20.83 7.81151L20.5203 8.45023L21.0764 8.89131L20.384 9.04735L20.3859 9.7572L19.8322 9.31306L19.2784 9.7572L19.2804 9.04735L18.5879 8.89131L19.144 8.45023L18.8344 7.81151L19.5259 7.97141L19.8322 7.33099Z" fill="#F0F0F0" />
+        <path d="M22.6798 3.44922L22.9861 4.08964L23.6776 3.92968L23.3679 4.56845L23.924 5.00948L23.2316 5.16557L23.2335 5.87536L22.6798 5.43123L22.1261 5.87536L22.1279 5.16557L21.4355 5.00948L21.9917 4.56845L21.682 3.92968L22.3736 4.08964L22.6798 3.44922Z" fill="#F0F0F0" />
+        <path d="M25.1681 6.3606L25.4743 7.00095L26.1659 6.84111L25.8562 7.47977L26.4124 7.9208L25.7199 8.07689L25.7218 8.78668L25.1681 8.34267L24.6144 8.78668L24.6162 8.07689L23.9238 7.9208L24.4799 7.47977L24.1702 6.84111L24.8618 7.00095L25.1681 6.3606Z" fill="#F0F0F0" />
+        <path d="M23.3896 9.7572L23.6304 10.4985H24.41L23.7793 10.9567L24.0203 11.698L23.3896 11.2399L22.7588 11.698L22.9998 10.9567L22.3691 10.4985H23.1487L23.3896 9.7572Z" fill="#F0F0F0" />
+        <path d="M15 0V1.79036L12.3535 3.26098H15V6.73898H11.5369L15 8.66286V9.99977H13.4367L9.13043 7.60767V9.99977H5.86957V7.15375L0.746719 9.99977H0V8.20959L2.6465 6.73898H0V3.26098H3.46307L0 1.33645V0H1.56328L5.86957 2.39234V0H9.13043V2.8462L14.2533 0H15Z" fill="#F0F0F0" />
+        <path d="M8.4375 0H6.5625V4.06234H0V5.93731H6.5625V9.99976H8.4375V5.93731H15V4.06234H8.4375V0Z" fill="#D80027" />
+        <path d="M9.13086 6.73895L15.0004 9.99975V9.07768L10.7906 6.73895H9.13086Z" fill="#D80027" />
+        <path d="M4.20973 6.73895L0 9.07768V9.99975L5.86957 6.73895H4.20973Z" fill="#D80027" />
+        <path d="M5.86957 3.26079L0 0V0.922072L4.20979 3.26079H5.86957Z" fill="#D80027" />
+        <path d="M10.7907 3.26079L15.0004 0.922072V0L9.13086 3.26079H10.7907Z" fill="#D80027" />
+      </svg>
+      +61
+    </span>
+    <input
+      inputMode="tel"
+      placeholder="0412 345 678"
+      className="h-12 bg-transparent px-4 text-base text-[#16233a] outline-none"
+      value={form.phone}
+      onChange={(event) => setForm((current) => ({ ...current, phone: normalizeAuPhone(event.target.value) }))}
+      required
+    />
+  </div>
+</label>
 
                 <button
                   className="mt-2 h-14 rounded-full bg-linear-to-b from-[#173e67] to-[#0b2a4a] font-[Space_Grotesk] text-base font-bold text-white shadow-[0_14px_30px_rgba(11,42,74,0.24)] disabled:opacity-70"
@@ -221,7 +248,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           SOUND FAMILIAR? / PROBLEM SECTION
       ========================================================= */}
       <section className="pt-10 pb-19">
-        <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
+        <div className={CONTAINER}>
           <div className="mb-7 w-full">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#d98d1f] before:block before:h-0.5 before:w-7 before:rounded-full before:bg-[linear-gradient(90deg,#f2a93b,transparent)] before:content-['']">
               {active?.soundFamiliarKicker || "Sound familiar?"}
@@ -275,7 +302,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           REALITY / CASE STUDY SECTION
       ========================================================= */}
       <section className="bg-[#f4f8fc] pt-10 pb-19">
-        <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
+        <div className={CONTAINER}>
           <div className="mb-7 w-full">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#d98d1f] before:block before:h-0.5 before:w-7 before:rounded-full before:bg-[linear-gradient(90deg,#f2a93b,transparent)] before:content-['']">
               {active?.realityKicker || "Why $500k isn't just $500k"}
@@ -337,7 +364,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           RELATE CHECKLIST — "Do any of these sound like you?"
       ========================================================= */}
       <section className="pt-10 pb-19">
-        <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
+        <div className={CONTAINER}>
           <div className="mb-7 w-full">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#d98d1f] before:block before:h-0.5 before:w-7 before:rounded-full before:bg-[linear-gradient(90deg,#f2a93b,transparent)] before:content-['']">
               {active?.relateKicker || "A quick check"}
@@ -394,7 +421,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           WHAT YOU'LL LEARN — numbered cards
       ========================================================= */}
       <section className="bg-[#f4f8fc] pt-10 pb-19">
-        <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
+        <div className={CONTAINER}>
           <div className="mb-7 w-full">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#d98d1f] before:block before:h-0.5 before:w-7 before:rounded-full before:bg-[linear-gradient(90deg,#f2a93b,transparent)] before:content-['']">
               {active?.learningKicker || "What you'll learn"}
@@ -437,7 +464,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           BEFORE / AFTER TRANSFORM SECTION
       ========================================================= */}
       <section className="pt-10 pb-19">
-        <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
+        <div className={CONTAINER}>
           <div className="mb-7 w-full">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#d98d1f] before:block before:h-0.5 before:w-7 before:rounded-full before:bg-[linear-gradient(90deg,#f2a93b,transparent)] before:content-['']">
               {active?.transformKicker || "Not sure if it's worth your time?"}
@@ -513,10 +540,10 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
       <HostsSection hosts={hosts} />
 
       {/* =========================================================
-          UPCOMING WEBINARS — unchanged
+          UPCOMING WEBINARS
       ========================================================= */}
       <section className="pt-10 pb-19">
-        <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
+        <div className={CONTAINER}>
           <div className="mb-7 w-full">
             <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#d98d1f] before:block before:h-0.5 before:w-7 before:rounded-full before:bg-[linear-gradient(90deg,#f2a93b,transparent)] before:content-['']">
               Upcoming webinars
@@ -570,7 +597,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           CONTACT
       ========================================================= */}
       <section className="bg-[#f4f8fc] pb-10 pt-10">
-        <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
+        <div className={CONTAINER}>
           <div className="relative overflow-hidden rounded-4xl bg-[linear-gradient(135deg,#0b2a4a_0%,#123a63_50%,#0b2a4a_100%)] p-8 text-white sm:p-12">
             <div className="pointer-events-none absolute -right-16 -top-28 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(242,169,59,0.16),transparent_65%)]" />
             <div className="pointer-events-none absolute -left-16 -bottom-28 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(26,77,128,0.35),transparent_65%)]" />

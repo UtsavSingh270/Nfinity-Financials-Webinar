@@ -2,7 +2,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata = {
-  title: "Nfinity Financials",
+  title: "Nfinity Financials | Webinars",
   description: "Webinars, registrations, hosts, and admin tools for Nfinity Financials.",
 };
 
