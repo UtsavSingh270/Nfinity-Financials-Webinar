@@ -43,6 +43,16 @@ export default function AdminDashboard({ initialWebinars, initialHosts, initialR
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => initialRegistrations.filter((item) => `${item.name} ${item.email} ${item.webinarTitle}`.toLowerCase().includes(query.toLowerCase())), [initialRegistrations, query]);
 
+  async function readJson(response) {
+    const text = await response.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { message: text };
+    }
+  }
+
   function openCreate() {
     setMessage("");
     setEditor({ kind: "webinar", ...emptyWebinar });
@@ -77,7 +87,7 @@ export default function AdminDashboard({ initialWebinars, initialHosts, initialR
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const result = await response.json();
+      const result = await readJson(response);
       if (!response.ok) {
         setMessage(result.message || "Unable to save host.");
         return;
@@ -96,7 +106,7 @@ export default function AdminDashboard({ initialWebinars, initialHosts, initialR
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const result = await response.json();
+    const result = await readJson(response);
 
     if (!response.ok) {
       setMessage(result.message || "Unable to save webinar.");
@@ -114,7 +124,7 @@ export default function AdminDashboard({ initialWebinars, initialHosts, initialR
     data.append("file", file);
     data.append("kind", kind);
     const response = await fetch("/api/uploads", { method: "POST", body: data });
-    const result = await response.json();
+    const result = await readJson(response);
     if (!response.ok) {
       setMessage(result.message || "Upload failed.");
       return;

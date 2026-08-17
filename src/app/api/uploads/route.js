@@ -18,27 +18,33 @@ async function ensureDir(dir) {
 }
 
 export async function POST(request) {
-  const formData = await request.formData();
-  const file = formData.get("file");
-  const kind = slugSegment(formData.get("kind"), "misc");
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file");
+    const kind = slugSegment(formData.get("kind"), "misc");
 
-  if (!file || typeof file === "string") {
-    return NextResponse.json({ message: "No file uploaded." }, { status: 400 });
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ message: "No file uploaded." }, { status: 400 });
+    }
+
+    const folder = kind === "host" ? "hosts" : kind === "webinar" ? "webinars" : kind;
+    await ensureDir(folder);
+
+    const ext = path.extname(file.name || "").toLowerCase() || ".bin";
+    const name = slugSegment(file.name?.replace(/\.[^.]+$/, ""), "upload");
+    const filename = `${Date.now()}-${name}${ext}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    await fs.writeFile(path.join(uploadRoot, folder, filename), buffer);
+
+    return NextResponse.json({
+      url: `/uploads/${folder}/${filename}`,
+      folder,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to upload file.";
+    return NextResponse.json({
+      message: process.env.VERCEL ? "File uploads need external storage on Vercel." : message,
+    }, { status: 500 });
   }
-
-  const folder = kind === "host" ? "hosts" : kind === "webinar" ? "webinars" : kind;
-  await ensureDir(folder);
-
-  const ext = path.extname(file.name || "").toLowerCase() || ".bin";
-  const name = slugSegment(file.name?.replace(/\.[^.]+$/, ""), "upload");
-  const filename = `${Date.now()}-${name}${ext}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  await fs.writeFile(path.join(uploadRoot, folder, filename), buffer);
-
-  return NextResponse.json({
-    url: `/uploads/${folder}/${filename}`,
-    folder,
-  });
 }
-
