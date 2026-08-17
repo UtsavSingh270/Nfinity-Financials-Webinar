@@ -1,0 +1,9 @@
+import nodemailer from "nodemailer";
+export async function sendRegistrationEmail(name, email, webinar) {
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD)
+        return false;
+    const transport = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure: Number(process.env.SMTP_PORT) === 465, auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } });
+    const date = new Date(`${webinar.date}T00:00:00`).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    await transport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: email, subject: `You're registered: ${webinar.title}`, html: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;background:#0b2a4a;color:#f7f4ed;padding:42px;border-radius:20px"><p style="color:#f2a93b;text-transform:uppercase;letter-spacing:2px;font-size:12px">Nfinity Financials registration confirmed</p><h1 style="font-size:34px;line-height:1.1">You’re in, ${name}.</h1><p style="color:#d7e2ef;font-size:16px;line-height:1.7">Your seat for <strong style="color:white">${webinar.title}</strong> is confirmed.</p><div style="background:#123a63;padding:24px;border-radius:14px;margin:28px 0"><p><strong>Date:</strong> ${date}</p><p><strong>Time:</strong> ${webinar.time}</p><p><strong>Duration:</strong> ${webinar.duration}</p><p><strong>Host:</strong> ${webinar.host}</p></div><a href="${webinar.meetLink}" style="display:inline-block;background:#f2a93b;color:#2a1a03;padding:15px 24px;border-radius:999px;font-weight:bold;text-decoration:none">Join the live webinar →</a><p style="color:#b7c5d7;font-size:12px;margin-top:30px">Keep this email handy. The join link will open the live meeting room.</p><p style="color:#b7c5d7;font-size:12px">Reply to info@nfinityfinancials.com if you have any questions.</p></div>` });
+    return true;
+}
