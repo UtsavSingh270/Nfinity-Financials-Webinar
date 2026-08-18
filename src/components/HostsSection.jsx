@@ -4,7 +4,7 @@ export default function HostsSection({ hosts = [] }) {
   if (!hosts.length) return null;
 
   return (
-    <section className="bg-[#f4f8fc] pt-10 pb-10">
+    <section className="bg-[#f4f8fc] pt-10 pb-10 w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-24 xl:px-40">
       <div className="mx-auto w-[min(1120px,calc(100%-32px))]">
         <div className="mb-7 w-full">
           <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#d98d1f] before:block before:h-0.5 before:w-7 before:rounded-full before:bg-[linear-gradient(90deg,#f2a93b,transparent)] before:content-['']">

@@ -27,33 +27,8 @@ import HostsSection from "./HostsSection";
 
 const defaultForm = { firstName: "", lastName: "", email: "", phone: "" };
 
-// Where we remember "this browser already registered for webinar X" so the
-// card-triggered modal can switch from create -> edit mode. There's no user
-// login on this page, so this is a browser-local convenience, not an auth
-// system — the backend is still the source of truth for real dedup.
-const REGISTRATIONS_STORAGE_KEY = "nf-webinar-registrations";
-
 function normalizeAuPhone(value) {
   return String(value || "").replace(/[^\d+]/g, "");
-}
-
-function loadStoredRegistrations() {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(REGISTRATIONS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveStoredRegistrations(value) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(REGISTRATIONS_STORAGE_KEY, JSON.stringify(value));
-  } catch {
-    // Storage can fail (private mode, quota) — non-fatal, just skip persisting.
-  }
 }
 
 // Site-wide brand/contact info. This isn't webinar-specific, so it lives
@@ -99,7 +74,7 @@ const SOCIAL_ICONS = {
 // / external displays (e.g. a desktop plugged into a big HDMI monitor).
 // NOTE: this does NOT wrap the top banner strip — that stays outside this
 // container so it remains perfectly edge-to-edge, untouched.
-const CONTAINER = "w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16";
+const CONTAINER = "w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-24 xl:px-40";
 
 // Reusable AU flag chip used by both the hero form and the modal form.
 function AuFlag() {
@@ -131,15 +106,12 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
   const active = selected || upcoming[0] || webinars[0] || null;
 
   // Per-webinar registration modal (opened from the upcoming-webinar cards).
+  // Keep this in memory only so users cannot override the page state via browser inspection or localStorage edits.
   const [registrations, setRegistrations] = useState({});
   const [modalWebinar, setModalWebinar] = useState(null);
   const [modalForm, setModalForm] = useState(defaultForm);
   const [modalStatus, setModalStatus] = useState("");
   const [modalSubmitting, setModalSubmitting] = useState(false);
-
-  useEffect(() => {
-    setRegistrations(loadStoredRegistrations());
-  }, []);
 
   useEffect(() => {
     if (!modalWebinar) return undefined;
@@ -153,7 +125,6 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalWebinar]);
 
   async function submit(event) {
@@ -223,7 +194,6 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           },
         };
         setRegistrations(updated);
-        saveStoredRegistrations(updated);
         setModalStatus(existing ? "Your details have been updated." : result.message || "You're registered!");
       } else {
         setModalStatus(result.message || "Unable to save your details. Please try again.");
@@ -245,7 +215,6 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
       <section className="relative overflow-hidden bg-[linear-gradient(160deg,#f8fbff_0%,#edf3fa_100%)] pt-0 pb-6">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(11,42,74,0.022)_1px,transparent_1px),linear-gradient(90deg,rgba(11,42,74,0.022)_1px,transparent_1px)] bg-size:48px_48px mask-[radial-gradient(ellipse_90%_70%_at_50%_35%,#000_20%,transparent_80%)]" />
 
-        {/* Edge-to-edge banner — intentionally left outside CONTAINER, do not change */}
         <div className="w-full bg-[#123a63] px-6 py-5 text-center md:py-3">
           <p className="mx-auto max-w-l text-sm font-bold leading-relaxed text-white sm:text-base md:text-lg">
             Kick Start Your Wealth Creation Journey Through{" "}
@@ -317,7 +286,10 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                   <input
                     className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
                     value={form.firstName}
-                    onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
+                    onChange={(event) => {
+                      setStatus("");
+                      setForm((current) => ({ ...current, firstName: event.target.value }));
+                    }}
                     required
                   />
                 </label>
@@ -327,7 +299,10 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                   <input
                     className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
                     value={form.lastName}
-                    onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
+                    onChange={(event) => {
+                      setStatus("");
+                      setForm((current) => ({ ...current, lastName: event.target.value }));
+                    }}
                     required
                   />
                 </label>
@@ -338,7 +313,10 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                     type="email"
                     className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
                     value={form.email}
-                    onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                    onChange={(event) => {
+                      setStatus("");
+                      setForm((current) => ({ ...current, email: event.target.value }));
+                    }}
                     required
                   />
                 </label>
@@ -355,7 +333,10 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                       placeholder="0412 345 678"
                       className="h-12 min-w-0 flex-1 bg-transparent px-3 sm:px-4 text-base text-[#16233a] outline-none"
                       value={form.phone}
-                      onChange={(event) => setForm((current) => ({ ...current, phone: normalizeAuPhone(event.target.value) }))}
+                      onChange={(event) => {
+                        setStatus("");
+                        setForm((current) => ({ ...current, phone: normalizeAuPhone(event.target.value) }));
+                      }}
                       required
                     />
                   </div>
@@ -817,7 +798,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
               role="dialog"
               aria-modal="true"
               aria-labelledby="webinar-modal-title"
-              className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-[0_30px_80px_-24px_rgba(11,42,74,0.35)] sm:max-w-md sm:rounded-3xl sm:p-7"
+              className="relative max-h-[92vh] w-full overflow-hidden rounded-t-3xl bg-white p-5 shadow-[0_30px_80px_-24px_rgba(11,42,74,0.35)] sm:max-w-md sm:rounded-3xl sm:p-7"
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
@@ -845,25 +826,33 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
               </p>
 
               <form className="mt-5 grid gap-3" onSubmit={submitModal}>
-                <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
-                  First Name *
-                  <input
-                    className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
-                    value={modalForm.firstName}
-                    onChange={(event) => setModalForm((current) => ({ ...current, firstName: event.target.value }))}
-                    required
-                  />
-                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
+                    First Name *
+                    <input
+                      className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
+                      value={modalForm.firstName}
+                      onChange={(event) => {
+                        setModalStatus("");
+                        setModalForm((current) => ({ ...current, firstName: event.target.value }));
+                      }}
+                      required
+                    />
+                  </label>
 
-                <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
-                  Last Name *
-                  <input
-                    className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
-                    value={modalForm.lastName}
-                    onChange={(event) => setModalForm((current) => ({ ...current, lastName: event.target.value }))}
-                    required
-                  />
-                </label>
+                  <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
+                    Last Name *
+                    <input
+                      className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
+                      value={modalForm.lastName}
+                      onChange={(event) => {
+                        setModalStatus("");
+                        setModalForm((current) => ({ ...current, lastName: event.target.value }));
+                      }}
+                      required
+                    />
+                  </label>
+                </div>
 
                 <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
                   Email *
@@ -871,7 +860,10 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                     type="email"
                     className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
                     value={modalForm.email}
-                    onChange={(event) => setModalForm((current) => ({ ...current, email: event.target.value }))}
+                    onChange={(event) => {
+                      setModalStatus("");
+                      setModalForm((current) => ({ ...current, email: event.target.value }));
+                    }}
                     required
                   />
                 </label>
@@ -888,7 +880,10 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                       placeholder="0412 345 678"
                       className="h-12 min-w-0 flex-1 bg-transparent px-3 sm:px-4 text-base text-[#16233a] outline-none"
                       value={modalForm.phone}
-                      onChange={(event) => setModalForm((current) => ({ ...current, phone: normalizeAuPhone(event.target.value) }))}
+                      onChange={(event) => {
+                        setModalStatus("");
+                        setModalForm((current) => ({ ...current, phone: normalizeAuPhone(event.target.value) }));
+                      }}
                       required
                     />
                   </div>
