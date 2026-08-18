@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
   CalendarDays,
@@ -14,6 +14,7 @@ import {
   Mail,
   Phone,
   Globe,
+  Pencil,
 } from "lucide-react";
 import {
   FaFacebookF,
@@ -26,8 +27,33 @@ import HostsSection from "./HostsSection";
 
 const defaultForm = { firstName: "", lastName: "", email: "", phone: "" };
 
+// Where we remember "this browser already registered for webinar X" so the
+// card-triggered modal can switch from create -> edit mode. There's no user
+// login on this page, so this is a browser-local convenience, not an auth
+// system — the backend is still the source of truth for real dedup.
+const REGISTRATIONS_STORAGE_KEY = "nf-webinar-registrations";
+
 function normalizeAuPhone(value) {
   return String(value || "").replace(/[^\d+]/g, "");
+}
+
+function loadStoredRegistrations() {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(REGISTRATIONS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredRegistrations(value) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REGISTRATIONS_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // Storage can fail (private mode, quota) — non-fatal, just skip persisting.
+  }
 }
 
 // Site-wide brand/contact info. This isn't webinar-specific, so it lives
@@ -75,6 +101,27 @@ const SOCIAL_ICONS = {
 // container so it remains perfectly edge-to-edge, untouched.
 const CONTAINER = "w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16";
 
+// Reusable AU flag chip used by both the hero form and the modal form.
+function AuFlag() {
+  return (
+    <svg viewBox="0 0 30 20" className="h-3.5 w-5 shrink-0" fill="none">
+      <path d="M30 0H0V20H30V0Z" fill="#0052B4" />
+      <path d="M11.0872 12.4564L11.7292 13.7989L13.1793 13.4639L12.5299 14.8029L13.6959 15.7275L12.2442 16.0548L12.2482 17.5429L11.0872 16.6119L9.92619 17.5429L9.93023 16.0548L8.47852 15.7275L9.64453 14.8029L8.99514 13.4639L10.4451 13.7989L11.0872 12.4564Z" fill="#F0F0F0" />
+      <path d="M22.6798 14.1241L22.9861 14.7645L23.6776 14.6047L23.3679 15.2433L23.9241 15.6844L23.2316 15.8404L23.2335 16.5502L22.6798 16.1062L22.1261 16.5502L22.1279 15.8404L21.4355 15.6844L21.9917 15.2433L21.682 14.6047L22.3736 14.7645L22.6798 14.1241Z" fill="#F0F0F0" />
+      <path d="M19.8322 7.33099L20.1385 7.97141L20.83 7.81151L20.5203 8.45023L21.0764 8.89131L20.384 9.04735L20.3859 9.7572L19.8322 9.31306L19.2784 9.7572L19.2804 9.04735L18.5879 8.89131L19.144 8.45023L18.8344 7.81151L19.5259 7.97141L19.8322 7.33099Z" fill="#F0F0F0" />
+      <path d="M22.6798 3.44922L22.9861 4.08964L23.6776 3.92968L23.3679 4.56845L23.924 5.00948L23.2316 5.16557L23.2335 5.87536L22.6798 5.43123L22.1261 5.87536L22.1279 5.16557L21.4355 5.00948L21.9917 4.56845L21.682 3.92968L22.3736 4.08964L22.6798 3.44922Z" fill="#F0F0F0" />
+      <path d="M25.1681 6.3606L25.4743 7.00095L26.1659 6.84111L25.8562 7.47977L26.4124 7.9208L25.7199 8.07689L25.7218 8.78668L25.1681 8.34267L24.6144 8.78668L24.6162 8.07689L23.9238 7.9208L24.4799 7.47977L24.1702 6.84111L24.8618 7.00095L25.1681 6.3606Z" fill="#F0F0F0" />
+      <path d="M23.3896 9.7572L23.6304 10.4985H24.41L23.7793 10.9567L24.0203 11.698L23.3896 11.2399L22.7588 11.698L22.9998 10.9567L22.3691 10.4985H23.1487L23.3896 9.7572Z" fill="#F0F0F0" />
+      <path d="M15 0V1.79036L12.3535 3.26098H15V6.73898H11.5369L15 8.66286V9.99977H13.4367L9.13043 7.60767V9.99977H5.86957V7.15375L0.746719 9.99977H0V8.20959L2.6465 6.73898H0V3.26098H3.46307L0 1.33645V0H1.56328L5.86957 2.39234V0H9.13043V2.8462L14.2533 0H15Z" fill="#F0F0F0" />
+      <path d="M8.4375 0H6.5625V4.06234H0V5.93731H6.5625V9.99976H8.4375V5.93731H15V4.06234H8.4375V0Z" fill="#D80027" />
+      <path d="M9.13086 6.73895L15.0004 9.99975V9.07768L10.7906 6.73895H9.13086Z" fill="#D80027" />
+      <path d="M4.20973 6.73895L0 9.07768V9.99975L5.86957 6.73895H4.20973Z" fill="#D80027" />
+      <path d="M5.86957 3.26079L0 0V0.922072L4.20979 3.26079H5.86957Z" fill="#D80027" />
+      <path d="M10.7907 3.26079L15.0004 0.922072V0L9.13086 3.26079H10.7907Z" fill="#D80027" />
+    </svg>
+  );
+}
+
 export default function HomePage({ webinars, hosts, initialSlug }) {
   const upcoming = useMemo(() => webinars.filter((item) => item.status === "upcoming"), [webinars]);
   const initial = initialSlug ? webinars.find((item) => item.slug === initialSlug) : null;
@@ -82,6 +129,32 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
   const [form, setForm] = useState(defaultForm);
   const [status, setStatus] = useState("");
   const active = selected || upcoming[0] || webinars[0] || null;
+
+  // Per-webinar registration modal (opened from the upcoming-webinar cards).
+  const [registrations, setRegistrations] = useState({});
+  const [modalWebinar, setModalWebinar] = useState(null);
+  const [modalForm, setModalForm] = useState(defaultForm);
+  const [modalStatus, setModalStatus] = useState("");
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+
+  useEffect(() => {
+    setRegistrations(loadStoredRegistrations());
+  }, []);
+
+  useEffect(() => {
+    if (!modalWebinar) return undefined;
+    function onKeyDown(event) {
+      if (event.key === "Escape") closeModal();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalWebinar]);
 
   async function submit(event) {
     event.preventDefault();
@@ -97,6 +170,72 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
     setStatus(response.ok ? result.message : result.message || "Unable to register.");
     if (response.ok) setForm(defaultForm);
   }
+
+  function openRegisterModal(webinar) {
+    const existing = registrations[webinar.id];
+    setModalWebinar(webinar);
+    setModalForm(
+      existing
+        ? {
+            firstName: existing.firstName || "",
+            lastName: existing.lastName || "",
+            email: existing.email || "",
+            phone: existing.phone || "",
+          }
+        : defaultForm
+    );
+    setModalStatus("");
+  }
+
+  function closeModal() {
+    setModalWebinar(null);
+    setModalForm(defaultForm);
+    setModalStatus("");
+    setModalSubmitting(false);
+  }
+
+  async function submitModal(event) {
+    event.preventDefault();
+    if (!modalWebinar) return;
+
+    const existing = registrations[modalWebinar.id];
+    setModalStatus("");
+    setModalSubmitting(true);
+
+    try {
+      const response = await fetch(
+        existing ? `/api/registrations/${existing.registrationId}` : "/api/registrations",
+        {
+          method: existing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...modalForm, webinarId: modalWebinar.id }),
+        }
+      );
+      const result = await response.json();
+
+      if (response.ok) {
+        const updated = {
+          ...registrations,
+          [modalWebinar.id]: {
+            registrationId: result.id || existing?.registrationId,
+            webinarTitle: modalWebinar.title,
+            ...modalForm,
+          },
+        };
+        setRegistrations(updated);
+        saveStoredRegistrations(updated);
+        setModalStatus(existing ? "Your details have been updated." : result.message || "You're registered!");
+      } else {
+        setModalStatus(result.message || "Unable to save your details. Please try again.");
+      }
+    } catch {
+      setModalStatus("Something went wrong. Please check your connection and try again.");
+    } finally {
+      setModalSubmitting(false);
+    }
+  }
+
+  const modalIsEditing = modalWebinar ? Boolean(registrations[modalWebinar.id]) : false;
 
   return (
     <main id="nf-webinar-page" className="min-h-screen w-full overflow-x-hidden bg-white text-slate-800">
@@ -133,7 +272,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
 
               <h1 className="mt-4 max-w-full text-[clamp(2.1rem,5.6vw,4.4rem)] font-bold leading-[1.05] lg:leading-[0.98] tracking-[-0.03em] sm:tracking-[-0.04em] text-[#0b2a4a] font-['Space_Grotesk',sans-serif]">
                 Learn how to Kick Start Your{" "}
-                <span className="text-[#f2a93b]">Wealth Creation Journey{" "}</span>
+                <span className="text-[#f2a93b]">Wealth Creation Journey</span>{" "}
                 Through Properties
               </h1>
 
@@ -208,21 +347,7 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
                   Phone *
                   <div className="grid w-full grid-cols-[auto_1fr] items-center gap-0 overflow-hidden rounded-xl border border-[#dbe3ef] bg-[#f9fbfd]">
                     <span className="flex h-12 items-center gap-1.5 sm:gap-2 border-r border-[#dbe3ef] bg-[#f9fbfd] px-2.5 sm:px-3 text-sm font-bold text-[#0b2a4a]">
-                      <svg viewBox="0 0 30 20" className="h-3.5 w-5 shrink-0" fill="none">
-                        <path d="M30 0H0V20H30V0Z" fill="#0052B4" />
-                        <path d="M11.0872 12.4564L11.7292 13.7989L13.1793 13.4639L12.5299 14.8029L13.6959 15.7275L12.2442 16.0548L12.2482 17.5429L11.0872 16.6119L9.92619 17.5429L9.93023 16.0548L8.47852 15.7275L9.64453 14.8029L8.99514 13.4639L10.4451 13.7989L11.0872 12.4564Z" fill="#F0F0F0" />
-                        <path d="M22.6798 14.1241L22.9861 14.7645L23.6776 14.6047L23.3679 15.2433L23.9241 15.6844L23.2316 15.8404L23.2335 16.5502L22.6798 16.1062L22.1261 16.5502L22.1279 15.8404L21.4355 15.6844L21.9917 15.2433L21.682 14.6047L22.3736 14.7645L22.6798 14.1241Z" fill="#F0F0F0" />
-                        <path d="M19.8322 7.33099L20.1385 7.97141L20.83 7.81151L20.5203 8.45023L21.0764 8.89131L20.384 9.04735L20.3859 9.7572L19.8322 9.31306L19.2784 9.7572L19.2804 9.04735L18.5879 8.89131L19.144 8.45023L18.8344 7.81151L19.5259 7.97141L19.8322 7.33099Z" fill="#F0F0F0" />
-                        <path d="M22.6798 3.44922L22.9861 4.08964L23.6776 3.92968L23.3679 4.56845L23.924 5.00948L23.2316 5.16557L23.2335 5.87536L22.6798 5.43123L22.1261 5.87536L22.1279 5.16557L21.4355 5.00948L21.9917 4.56845L21.682 3.92968L22.3736 4.08964L22.6798 3.44922Z" fill="#F0F0F0" />
-                        <path d="M25.1681 6.3606L25.4743 7.00095L26.1659 6.84111L25.8562 7.47977L26.4124 7.9208L25.7199 8.07689L25.7218 8.78668L25.1681 8.34267L24.6144 8.78668L24.6162 8.07689L23.9238 7.9208L24.4799 7.47977L24.1702 6.84111L24.8618 7.00095L25.1681 6.3606Z" fill="#F0F0F0" />
-                        <path d="M23.3896 9.7572L23.6304 10.4985H24.41L23.7793 10.9567L24.0203 11.698L23.3896 11.2399L22.7588 11.698L22.9998 10.9567L22.3691 10.4985H23.1487L23.3896 9.7572Z" fill="#F0F0F0" />
-                        <path d="M15 0V1.79036L12.3535 3.26098H15V6.73898H11.5369L15 8.66286V9.99977H13.4367L9.13043 7.60767V9.99977H5.86957V7.15375L0.746719 9.99977H0V8.20959L2.6465 6.73898H0V3.26098H3.46307L0 1.33645V0H1.56328L5.86957 2.39234V0H9.13043V2.8462L14.2533 0H15Z" fill="#F0F0F0" />
-                        <path d="M8.4375 0H6.5625V4.06234H0V5.93731H6.5625V9.99976H8.4375V5.93731H15V4.06234H8.4375V0Z" fill="#D80027" />
-                        <path d="M9.13086 6.73895L15.0004 9.99975V9.07768L10.7906 6.73895H9.13086Z" fill="#D80027" />
-                        <path d="M4.20973 6.73895L0 9.07768V9.99975L5.86957 6.73895H4.20973Z" fill="#D80027" />
-                        <path d="M5.86957 3.26079L0 0V0.922072L4.20979 3.26079H5.86957Z" fill="#D80027" />
-                        <path d="M10.7907 3.26079L15.0004 0.922072V0L9.13086 3.26079H10.7907Z" fill="#D80027" />
-                      </svg>
+                      <AuFlag />
                       +61
                     </span>
                     <input
@@ -558,43 +683,56 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
               Register from the cards below.
             </h2>
             <p className="mt-4 w-full max-w-none text-[#5b6b82]">
-              Each webinar card can use an uploaded image from the dashboard. Clicking register brings the visitor back to the top form and selects that webinar.
+              Each webinar card opens a quick registration form. Already registered? The same button lets you edit your details.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {upcoming.map((webinar) => (
-              <article key={webinar.id} className="overflow-hidden rounded-[22px] border border-[#e6ecf3] bg-white shadow-[0_2px_12px_rgba(11,42,74,0.06)]">
-                <div className="relative min-h-44 sm:min-h-52.5 bg-[#e9f0f8]">
-                  {webinar.imageUrl ? (
-                    <Image src={webinar.imageUrl} alt={webinar.title} fill sizes="(max-width: 900px) 100vw, 360px" className="object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 grid place-items-center gap-2 p-6 text-center text-[#0b2a4a]">
-                      <Users className="h-6 w-6" />
-                      <span className="text-sm font-semibold">No image uploaded</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-5 sm:p-6">
-                  <small className="block text-[11px] font-bold uppercase tracking-[0.12em] text-[#d98d1f]">{webinar.category}</small>
-                  <h3 className="mt-2 text-[1.35rem] sm:text-[1.55rem] font-semibold leading-[1.1] sm:leading-[1.05] text-[#0b2a4a] font-['Space_Grotesk',sans-serif]">{webinar.title}</h3>
-                  <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-semibold text-[#123a63]">
-                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><CalendarDays className="h-3.5 w-3.5" /> {new Date(`${webinar.date}T00:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>
-                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><Clock3 className="h-3.5 w-3.5" /> {webinar.time}</span>
-                    <button
-                      type="button"
-                      className="ml-auto inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold text-[#f2a93b]"
-                      onClick={() => {
-                        setSelected(webinar);
-                        document.getElementById("register")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                    >
-                      Register <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
+            {upcoming.map((webinar) => {
+              const isRegistered = Boolean(registrations[webinar.id]);
+              return (
+                <article key={webinar.id} className="overflow-hidden rounded-[22px] border border-[#e6ecf3] bg-white shadow-[0_2px_12px_rgba(11,42,74,0.06)]">
+                  <div className="relative min-h-44 sm:min-h-52.5 bg-[#e9f0f8]">
+                    {webinar.imageUrl ? (
+                      <Image src={webinar.imageUrl} alt={webinar.title} fill sizes="(max-width: 900px) 100vw, 360px" className="object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 grid place-items-center gap-2 p-6 text-center text-[#0b2a4a]">
+                        <Users className="h-6 w-6" />
+                        <span className="text-sm font-semibold">No image uploaded</span>
+                      </div>
+                    )}
+                    {isRegistered && (
+                      <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-[#16a34a] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow">
+                        <Check className="h-3 w-3" /> Registered
+                      </span>
+                    )}
                   </div>
-                </div>
-              </article>
-            ))}
+                  <div className="p-5 sm:p-6">
+                    <small className="block text-[11px] font-bold uppercase tracking-[0.12em] text-[#d98d1f]">{webinar.category}</small>
+                    <h3 className="mt-2 text-[1.35rem] sm:text-[1.55rem] font-semibold leading-[1.1] sm:leading-[1.05] text-[#0b2a4a] font-['Space_Grotesk',sans-serif]">{webinar.title}</h3>
+                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-semibold text-[#123a63]">
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><CalendarDays className="h-3.5 w-3.5" /> {new Date(`${webinar.date}T00:00:00`).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><Clock3 className="h-3.5 w-3.5" /> {webinar.time}</span>
+                      <button
+                        type="button"
+                        className="ml-auto inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold text-[#f2a93b]"
+                        onClick={() => openRegisterModal(webinar)}
+                      >
+                        {isRegistered ? (
+                          <>
+                            Edit details <Pencil className="h-3.5 w-3.5" />
+                          </>
+                        ) : (
+                          <>
+                            Register <ArrowRight className="h-3.5 w-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -656,6 +794,120 @@ export default function HomePage({ webinars, hosts, initialSlug }) {
           </div>
         </div>
       </section>
+
+      {/* =========================================================
+          WEBINAR REGISTRATION MODAL — opened from the upcoming-webinar
+          cards. Same field set as the hero form. If this browser has
+          already registered for this webinar, it opens pre-filled and
+          submits as an edit (PATCH) instead of a new registration.
+      ========================================================= */}
+      <AnimatePresence>
+        {modalWebinar && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-[#0b2a4a]/55 backdrop-blur-sm p-0 sm:items-center sm:p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) closeModal();
+            }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="webinar-modal-title"
+              className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-[0_30px_80px_-24px_rgba(11,42,74,0.35)] sm:max-w-md sm:rounded-3xl sm:p-7"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ duration: 0.25 }}
+            >
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Close"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#f4f8fc] text-[#0b2a4a] transition-colors hover:bg-[#e6ecf3]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <span className="inline-flex items-center rounded-full bg-[#fdf1de] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#d98d1f]">
+                {modalIsEditing ? "Edit your registration" : "Reserve your spot"}
+              </span>
+              <h2 id="webinar-modal-title" className="mt-3 pr-8 text-xl font-bold leading-tight text-[#0b2a4a] font-['Space_Grotesk',sans-serif] sm:text-2xl">
+                {modalWebinar.title}
+              </h2>
+              <p className="mt-1 text-sm text-[#5b6b82]">
+                {modalIsEditing
+                  ? "Update your details below — we'll keep your spot for this webinar."
+                  : "Fill in your details and we'll send you the link to join."}
+              </p>
+
+              <form className="mt-5 grid gap-3" onSubmit={submitModal}>
+                <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
+                  First Name *
+                  <input
+                    className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
+                    value={modalForm.firstName}
+                    onChange={(event) => setModalForm((current) => ({ ...current, firstName: event.target.value }))}
+                    required
+                  />
+                </label>
+
+                <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
+                  Last Name *
+                  <input
+                    className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
+                    value={modalForm.lastName}
+                    onChange={(event) => setModalForm((current) => ({ ...current, lastName: event.target.value }))}
+                    required
+                  />
+                </label>
+
+                <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
+                  Email *
+                  <input
+                    type="email"
+                    className="h-12 w-full min-w-0 rounded-xl border border-[#dbe3ef] bg-[#f9fbfd] px-4 text-base text-[#16233a] outline-none"
+                    value={modalForm.email}
+                    onChange={(event) => setModalForm((current) => ({ ...current, email: event.target.value }))}
+                    required
+                  />
+                </label>
+
+                <label className="grid gap-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#0b2a4a]">
+                  Phone *
+                  <div className="grid w-full grid-cols-[auto_1fr] items-center gap-0 overflow-hidden rounded-xl border border-[#dbe3ef] bg-[#f9fbfd]">
+                    <span className="flex h-12 items-center gap-1.5 sm:gap-2 border-r border-[#dbe3ef] bg-[#f9fbfd] px-2.5 sm:px-3 text-sm font-bold text-[#0b2a4a]">
+                      <AuFlag />
+                      +61
+                    </span>
+                    <input
+                      inputMode="tel"
+                      placeholder="0412 345 678"
+                      className="h-12 min-w-0 flex-1 bg-transparent px-3 sm:px-4 text-base text-[#16233a] outline-none"
+                      value={modalForm.phone}
+                      onChange={(event) => setModalForm((current) => ({ ...current, phone: normalizeAuPhone(event.target.value) }))}
+                      required
+                    />
+                  </div>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={modalSubmitting}
+                  className="mt-2 h-14 w-full rounded-full bg-linear-to-b from-[#173e67] to-[#0b2a4a] font-[Space_Grotesk] text-base font-bold text-white shadow-[0_14px_30px_rgba(11,42,74,0.24)] disabled:opacity-70"
+                >
+                  {modalSubmitting ? "Saving..." : modalIsEditing ? "Save Changes" : "Register Now"}
+                </button>
+
+                {modalStatus && <p className="m-0 text-sm font-semibold text-[#0b2a4a]">{modalStatus}</p>}
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
