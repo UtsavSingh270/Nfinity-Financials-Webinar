@@ -72,7 +72,7 @@ const SOCIAL_ICONS = {
 // / external displays (e.g. a desktop plugged into a big HDMI monitor).
 // NOTE: this does NOT wrap the top banner strip — that stays outside this
 // container so it remains perfectly edge-to-edge, untouched.
-const CONTAINER = "w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-24 xl:px-40";
+const CONTAINER = "w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-16 xl:px-40";
 
 // Reusable AU flag chip used by both the hero form and the modal form.
 function AuFlag() {
